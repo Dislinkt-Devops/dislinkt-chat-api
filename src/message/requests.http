@@ -1,0 +1,31 @@
+### Create
+POST http://localhost:3000/message
+content-type: application/json
+
+{
+	"sender": 1,
+	"receiver": 2,
+	"content": "message {{$randomInt 5 200}}"
+}
+
+### Create (Answer)
+POST http://localhost:3000/message
+content-type: application/json
+
+{
+	"sender": 2,
+	"receiver": 1,
+	"content": "message {{$randomInt 5 200}}"
+}
+
+### Mark as read
+PUT http://localhost:3000/message/read
+content-type: application/json
+
+{
+	"receiver": 1,
+	"timestamp": "2022-09-13T20:59:45.828Z"
+}
+
+### Get All
+GET http://localhost:3000/message?sender=1&receiver=2
