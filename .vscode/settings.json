@@ -3,5 +3,6 @@
 		"dislinkt",
 		"middlewares",
 		"nestjs"
-	]
+	],
+	"javascript.preferences.importModuleSpecifier": "relative"
 }

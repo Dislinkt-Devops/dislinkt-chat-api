@@ -7,7 +7,7 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { Serialize } from 'src/interceptors/serialize.interceptor';
+import { Serialize } from '../interceptors/serialize.interceptor';
 import { MarkAsRead } from './dtos/mark-as-read.dto';
 import { MessageDto } from './dtos/message.dto';
 import { SendMessageDto } from './dtos/send-message.dto';
