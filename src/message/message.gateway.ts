@@ -29,7 +29,7 @@ export class MessageGateway
 
   async handleConnection(client: Socket) {
     const roomNameArray: string[] = new Array(2);
-    const userId = client.handshake.headers['user-id'] as string;
+    const userId = client.handshake.headers['x-user-id'] as string;
 
     if (!userId) {
       this.logger.log('User Id missing in headers!');
@@ -55,12 +55,7 @@ export class MessageGateway
       'User id ' + userId + ' joining room with user id ' + secondUserId + '!',
     );
     this.logger.log('Room name: ' + roomNameString);
-    client.send(
-      await this.messageService.getMessages(
-        Number(userId),
-        Number(secondUserId),
-      ),
-    );
+    client.send(await this.messageService.getMessages(userId, secondUserId));
     client.join(roomNameString);
   }
 
@@ -73,8 +68,8 @@ export class MessageGateway
     const secondUserId = client.handshake.query.userId as string;
 
     const message = await this.messageService.sendMessage(
-      Number(secondUserId),
-      Number(userId),
+      secondUserId,
+      userId,
       messageContent,
     );
 
