@@ -4,10 +4,11 @@ import {
   RequestMethod,
   ValidationPipe,
 } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AllExceptionFilter } from './filters/exception.filter';
+import { MessageEntity } from './message/message.entity';
 import { MessageModule } from './message/message.module';
 import { LoggerMiddleware } from './middlewares/logger.middleware';
 
@@ -17,11 +18,17 @@ import { LoggerMiddleware } from './middlewares/logger.middleware';
       isGlobal: true,
       envFilePath: `.env.development`,
     }),
-    TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: 'db.sqlite',
-      entities: ['**/*.entity.js'],
-      synchronize: true,
+    TypeOrmModule.forRootAsync({
+      useFactory: (configService: ConfigService) => ({
+        type: 'mongodb',
+        host: configService.get('DB_HOST'),
+        port: +configService.get('DB_PORT'),
+        username: configService.get('DB_USER'),
+        password: configService.get('DB_PASSWORD'),
+        entities: [MessageEntity],
+        // synchronize: true,
+      }),
+      inject: [ConfigService]
     }),
     MessageModule,
   ],

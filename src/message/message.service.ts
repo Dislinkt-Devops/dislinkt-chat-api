@@ -1,24 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThanOrEqual, Repository, UpdateResult } from 'typeorm';
-import { Message } from './message.entity';
+import { FindOptionsWhere, In, LessThanOrEqual, Repository, UpdateResult } from 'typeorm';
+import { MessageEntity } from './message.entity';
 
 @Injectable()
 export class MessageService {
   constructor(
-    @InjectRepository(Message) private repository: Repository<Message>,
+    @InjectRepository(MessageEntity)
+    private repository: Repository<MessageEntity>,
   ) {}
 
   async sendMessage(
-    receiver: number,
-    sender: number,
+    receiver: string,
+    sender: string,
     content: string,
-  ): Promise<Message> {
+  ): Promise<MessageEntity> {
     return this.repository.save({ receiver, sender, content });
   }
 
+  //TODO: Add proper logic to trigger markAsRead and refactor this function
   async markAsRead(
-    receiver: number,
+    receiver: string,
     id: number[],
     timestamp: Date,
   ): Promise<UpdateResult> {
@@ -30,10 +32,12 @@ export class MessageService {
     );
   }
 
-  async getMessages(receiver: number, sender: number): Promise<Message[]> {
-    return this.repository.findBy([
-      { receiver, sender },
-      { receiver: sender, sender: receiver },
-    ]);
+  async getMessages(
+    receiver: string,
+    sender: string,
+  ): Promise<MessageEntity[]> {
+    return this.repository.findBy({
+        sender, receiver
+    });
   }
 }
