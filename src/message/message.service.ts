@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThanOrEqual, Repository, UpdateResult } from 'typeorm';
+import { FindOptionsWhere, In, LessThanOrEqual, Repository, UpdateResult } from 'typeorm';
 import { MessageEntity } from './message.entity';
 
 @Injectable()
@@ -36,9 +36,8 @@ export class MessageService {
     receiver: string,
     sender: string,
   ): Promise<MessageEntity[]> {
-    return this.repository.findBy([
-      { receiver, sender },
-      { receiver: sender, sender: receiver },
-    ]);
+    return this.repository.findBy({
+        sender, receiver
+    });
   }
 }

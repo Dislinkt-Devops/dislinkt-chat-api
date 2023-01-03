@@ -11,7 +11,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { MessageService } from './message.service';
 
-@WebSocketGateway({ namespace: 'chat' })
+@WebSocketGateway()
 export class MessageGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
@@ -20,7 +20,7 @@ export class MessageGateway
   private readonly logger = new Logger(MessageGateway.name);
 
   handleDisconnect(client: Socket) {
-    const userId = client.handshake.headers['user-id'];
+    const userId = client.handshake.headers['x-user-id'];
 
     this.logger.log('User id ' + userId + ' disconnected!');
   }
@@ -64,7 +64,7 @@ export class MessageGateway
     @MessageBody() messageContent: string,
     @ConnectedSocket() client: Socket,
   ): Promise<void> {
-    const userId = client.handshake.headers['user-id'] as string;
+    const userId = client.handshake.headers['x-user-id'] as string;
     const secondUserId = client.handshake.query.userId as string;
 
     const message = await this.messageService.sendMessage(
