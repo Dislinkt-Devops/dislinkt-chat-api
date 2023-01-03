@@ -4,7 +4,8 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  PrimaryGeneratedColumn,
+  Index,
+  ObjectIdColumn,
 } from 'typeorm';
 
 @Entity({
@@ -13,20 +14,22 @@ import {
     id: 'ASC',
   },
 })
-export class Message {
-  private readonly logger = new Logger(Message.name);
+export class MessageEntity {
+  private readonly logger = new Logger(MessageEntity.name);
 
-  @PrimaryGeneratedColumn()
+  @ObjectIdColumn()
   id: number;
 
   @Column({ nullable: false })
   content: string;
 
-  @Column({ nullable: false })
-  sender: number;
+  @Column({ nullable: false, type: 'uuid' })
+  @Index()
+  sender: string;
 
-  @Column({ nullable: false })
-  receiver: number;
+  @Column({ nullable: false, type: 'uuid' })
+  @Index()
+  receiver: string;
 
   @Column({ default: true })
   unread: boolean;
