@@ -11,7 +11,9 @@ import {
 import { Server, Socket } from 'socket.io';
 import { MessageService } from './message.service';
 
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: { origin: '*' },
+})
 export class MessageGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
