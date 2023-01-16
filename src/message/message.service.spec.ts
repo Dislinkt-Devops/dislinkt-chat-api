@@ -1,27 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, LessThanOrEqual, Repository } from 'typeorm';
 import { MessageEntity } from './message.entity';
 import { MessageService } from './message.service';
-
-const messagesArray = [
-  {
-    id: 1,
-    content: 'first',
-    sender: 'bde85af2-44d6-4aff-90c4-52a98995fe7c',
-    receiver: '49876fdd-4387-41e5-bf3e-43d907c9dfbc',
-    unread: true,
-    timestamp: new Date('2022-09-18'),
-  },
-  {
-    id: 2,
-    content: 'second',
-    sender: '49876fdd-4387-41e5-bf3e-43d907c9dfbc',
-    receiver: 'bde85af2-44d6-4aff-90c4-52a98995fe7c',
-    unread: true,
-    timestamp: new Date('2022-09-19'),
-  },
-] as MessageEntity[];
 
 describe('MessageService', () => {
   let service: MessageService;
@@ -34,12 +15,9 @@ describe('MessageService', () => {
         {
           provide: getRepositoryToken(MessageEntity),
           useValue: {
-            find: jest.fn().mockResolvedValue(messagesArray),
-            findOneOrFail: jest.fn().mockResolvedValue(messagesArray[0]),
-            create: jest.fn().mockReturnValue(messagesArray[1]),
-            save: jest.fn(),
-            update: jest.fn().mockResolvedValue(true),
-            delete: jest.fn().mockResolvedValue(true),
+            save: jest.fn().mockResolvedValue({}),
+            update: jest.fn().mockResolvedValue({ affected: 1 }),
+            findBy: jest.fn().mockResolvedValue([]),
           },
         },
       ],
@@ -54,5 +32,75 @@ describe('MessageService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
     expect(repo).toBeDefined();
+  });
+
+  describe('sendMessage', () => {
+    it('should call repository.save with the correct arguments', async () => {
+      const receiver = 'receiver';
+      const sender = 'sender';
+      const content = 'content';
+      await service.sendMessage(receiver, sender, content);
+      expect(repo.save).toHaveBeenCalledWith({
+        receiver,
+        sender,
+        content,
+      });
+    });
+
+    it('should return the result of repository.save', async () => {
+      const result = { id: 1 };
+      (repo.save as jest.Mock).mockResolvedValue(result);
+      const sendResult = await service.sendMessage('receiver', 'sender', 'content');
+      expect(sendResult).toEqual(result);
+    });
+  });
+
+  describe('markAsRead', () => {
+    it('should call repository.update with the correct arguments if id is provided', async () => {
+      const receiver = 'receiver';
+      const id = [1, 2];
+      const timestamp = new Date();
+      await service.markAsRead(receiver, id, timestamp);
+      expect(repo.update).toHaveBeenCalledWith(
+        { id: In(id), receiver, unread: true },
+        { unread: false },
+      );
+    });
+
+    it('should call repository.update with the correct arguments if id is not provided', async () => {
+      const receiver = 'receiver';
+      const timestamp = new Date();
+      await service.markAsRead(receiver, undefined, timestamp);
+      expect(repo.update).toHaveBeenCalledWith(
+        { timestamp: LessThanOrEqual(timestamp), receiver, unread: true },
+        { unread: false },
+      );
+    });
+
+    it('should return the result of repository.update', async () => {
+      const result = { affected: 1 };
+      (repo.update as jest.Mock).mockResolvedValue(result);
+      const markResult = await service.markAsRead('receiver', [1, 2], new Date());
+      expect(markResult).toEqual(result);
+    });
+  });
+
+  describe('getMessages', () => {
+    it('should call repository.findBy with the correct arguments', async () => {
+      const receiver = 'receiver';
+      const sender = 'sender';
+      await service.getMessages(receiver, sender);
+      expect(repo.findBy).toHaveBeenCalledWith({
+        sender,
+        receiver,
+      });
+    });
+
+    it('should return the result of repository.findBy', async () => {
+      const result = [{ id: 1 }, { id: 2 }];
+      (repo.findBy as jest.Mock).mockResolvedValue(result);
+      const getResult = await service.getMessages('receiver', 'sender');
+      expect(getResult).toEqual(result);
+    });
   });
 });
