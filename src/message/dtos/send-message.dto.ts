@@ -1,11 +1,8 @@
-import { IsNumber, IsString } from 'class-validator';
+import { IsString, IsUUID } from 'class-validator';
 
 export class SendMessageDto {
-  @IsNumber()
-  sender: number;
-
-  @IsNumber()
-  receiver: number;
+  @IsUUID()
+  receiver: string;
 
   @IsString()
   content: string;

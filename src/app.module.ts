@@ -26,9 +26,9 @@ import { LoggerMiddleware } from './middlewares/logger.middleware';
         username: configService.get('DB_USER'),
         password: configService.get('DB_PASSWORD'),
         entities: [MessageEntity],
-        // synchronize: true,
+        synchronize: true,
       }),
-      inject: [ConfigService]
+      inject: [ConfigService],
     }),
     MessageModule,
   ],

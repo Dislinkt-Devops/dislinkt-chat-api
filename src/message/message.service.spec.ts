@@ -39,7 +39,7 @@ describe('MessageService', () => {
       const receiver = 'receiver';
       const sender = 'sender';
       const content = 'content';
-      await service.sendMessage(receiver, sender, content);
+      await service.saveMessage(receiver, sender, content);
       expect(repo.save).toHaveBeenCalledWith({
         receiver,
         sender,
@@ -50,7 +50,11 @@ describe('MessageService', () => {
     it('should return the result of repository.save', async () => {
       const result = { id: 1 };
       (repo.save as jest.Mock).mockResolvedValue(result);
-      const sendResult = await service.sendMessage('receiver', 'sender', 'content');
+      const sendResult = await service.saveMessage(
+        'receiver',
+        'sender',
+        'content',
+      );
       expect(sendResult).toEqual(result);
     });
   });
@@ -80,7 +84,11 @@ describe('MessageService', () => {
     it('should return the result of repository.update', async () => {
       const result = { affected: 1 };
       (repo.update as jest.Mock).mockResolvedValue(result);
-      const markResult = await service.markAsRead('receiver', [1, 2], new Date());
+      const markResult = await service.markAsRead(
+        'receiver',
+        [1, 2],
+        new Date(),
+      );
       expect(markResult).toEqual(result);
     });
   });
