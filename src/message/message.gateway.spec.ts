@@ -42,7 +42,9 @@ describe('MessageGateway', () => {
           useValue: {
             get: jest.fn(() =>
               of({
-                data: 'true',
+                data: {
+                  data: 'true',
+                },
               }),
             ),
           },
@@ -67,14 +69,17 @@ describe('MessageGateway', () => {
     messageService = module.get<MessageService>(MessageService);
     // logger = module.get<Logger>(Logger);
     mockServer = {
-      to: jest.fn(),
+      to: jest.fn(() => {
+        return {
+          emit: jest.fn(),
+        };
+      }),
     };
     client = {
       handshake: {
         headers: { 'x-user-id': 'user1' },
-        query: { userId: 'user2' },
       },
-      rooms: ['user1/user2'],
+      rooms: ['user1'],
       join: jest.fn(),
       send: jest.fn(),
       disconnect: jest.fn(),
@@ -109,14 +114,24 @@ describe('MessageGateway', () => {
     // expect(logger.log).toHaveBeenCalledWith('User id user1 disconnected!');
   });
 
-  // it('should handle a message event', async () => {
-  //   const message = { content: 'Hello' };
-  //   await gateway.handleMessage('Hello', client);
+  it('should handle a getMessages event', async () => {
+    const body = { userId: 'user2' };
+    await gateway.getMessages(body, client);
 
-  //   if (client.rooms) {
-  //     expect(mockServer.to).toHaveBeenCalledWith(Array.from(client.rooms));
-  //   } else {
-  //     expect(client.emit).toHaveBeenCalledWith('message', message);
-  //   }
-  // });
+    expect(messageService.getMessages).toHaveBeenCalledWith('user2', 'user1');
+    expect(client.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('should handle a message event', async () => {
+    const message = { content: 'Hello', receiver: 'user2' };
+    await gateway.handleMessage(message, client);
+
+    expect(messageService.saveMessage).toHaveBeenCalledWith(
+      'user2',
+      'user1',
+      'Hello',
+    );
+
+    expect(mockServer.to).toHaveBeenCalledWith(['user2', 'user1']);
+  });
 });
