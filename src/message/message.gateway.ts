@@ -1,4 +1,6 @@
+import { HttpService } from '@nestjs/axios/dist';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   MessageBody,
   SubscribeMessage,
@@ -8,7 +10,10 @@ import {
   OnGatewayDisconnect,
   ConnectedSocket,
 } from '@nestjs/websockets';
+import { lastValueFrom } from 'rxjs';
 import { Server, Socket } from 'socket.io';
+import { GetMessageDto } from './dtos/get-message.dto';
+import { SendMessageDto } from './dtos/send-message.dto';
 import { MessageService } from './message.service';
 
 @WebSocketGateway({
@@ -20,6 +25,15 @@ export class MessageGateway
   @WebSocketServer()
   server: Server;
   private readonly logger = new Logger(MessageGateway.name);
+  private postsApi: string;
+
+  constructor(
+    private httpService: HttpService,
+    configService: ConfigService,
+    private messageService: MessageService,
+  ) {
+    this.postsApi = configService.get('POSTS_API', 'localhost:8080');
+  }
 
   handleDisconnect(client: Socket) {
     const userId = client.handshake.headers['x-user-id'];
@@ -27,10 +41,7 @@ export class MessageGateway
     this.logger.log('User id ' + userId + ' disconnected!');
   }
 
-  constructor(private readonly messageService: MessageService) {}
-
   async handleConnection(client: Socket) {
-    const roomNameArray: string[] = new Array(2);
     const userId = client.handshake.headers['x-user-id'] as string;
 
     if (!userId) {
@@ -39,42 +50,59 @@ export class MessageGateway
       return;
     }
 
-    roomNameArray.push(userId);
-
-    const secondUserId = client.handshake.query.userId as string;
-    if (!secondUserId) {
-      this.logger.log('userId missing in query params!');
-      client.disconnect(true);
-      return;
-    }
-    roomNameArray.push(secondUserId);
-    roomNameArray.sort();
-
     this.logger.log('User id ' + userId + ' successfully connected!');
 
-    const roomNameString = roomNameArray[0] + '/' + roomNameArray[1];
-    this.logger.log(
-      'User id ' + userId + ' joining room with user id ' + secondUserId + '!',
+    client.join(userId);
+  }
+
+  @SubscribeMessage('getMessages')
+  async getMessages(
+    @MessageBody() body: GetMessageDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const currentUser = client.handshake.headers['x-user-id'] as string;
+
+    const messages = await this.messageService.getMessages(
+      body.userId,
+      currentUser,
     );
-    this.logger.log('Room name: ' + roomNameString);
-    client.send(await this.messageService.getMessages(userId, secondUserId));
-    client.join(roomNameString);
+
+    messages.forEach((message) => {
+      client.send(message);
+    });
   }
 
   @SubscribeMessage('message')
   async handleMessage(
-    @MessageBody() messageContent: string,
+    @MessageBody() message: SendMessageDto,
     @ConnectedSocket() client: Socket,
   ): Promise<void> {
-    const userId = client.handshake.headers['x-user-id'] as string;
-    const secondUserId = client.handshake.query.userId as string;
+    const sender = client.handshake.headers['x-user-id'] as string;
+    const { receiver } = message;
 
-    const message = await this.messageService.sendMessage(
-      secondUserId,
-      userId,
-      messageContent,
-    );
+    const { data: isCommunicationAllowed } = (
+      await lastValueFrom(
+        this.httpService.get(`http://${this.postsApi}/people/${receiver}`, {
+          headers: {
+            'x-user-id': sender,
+          },
+        }),
+      )
+    ).data;
 
-    this.server.to(Array.from(client.rooms)).emit('message', message);
+    if (!isCommunicationAllowed) {
+      const errorMessage = `Communication between user ${sender} and ${receiver} not allowed.`;
+      client.emit('exception', {
+        errorMessage,
+      });
+      this.logger.log(errorMessage);
+      return;
+    }
+
+    this.messageService.saveMessage(receiver, sender, message.content);
+
+    this.server
+      .to([receiver, sender])
+      .emit('message', { ...message, sender, timestamp: new Date() });
   }
 }

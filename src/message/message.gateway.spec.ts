@@ -5,6 +5,9 @@ import { Logger } from '@nestjs/common';
 import { MessageEntity } from './message.entity';
 import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { HttpService } from '@nestjs/axios';
+import { of } from 'rxjs';
+import { ConfigService } from '@nestjs/config';
 
 const message = {
   id: 1,
@@ -35,6 +38,24 @@ describe('MessageGateway', () => {
         MessageService,
         MessageEntity,
         {
+          provide: HttpService,
+          useValue: {
+            get: jest.fn(() =>
+              of({
+                data: 'true',
+              }),
+            ),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn(() => {
+              return 'dislinkt-posts:8080';
+            }),
+          },
+        },
+        {
           provide: getRepositoryToken(MessageEntity),
           useClass: MockRepository<MessageEntity>,
         },
@@ -64,13 +85,13 @@ describe('MessageGateway', () => {
       .spyOn(messageService, 'getMessages')
       .mockImplementation(() => Promise.resolve([message]));
     jest
-      .spyOn(messageService, 'sendMessage')
+      .spyOn(messageService, 'saveMessage')
       .mockImplementation(() => Promise.resolve(message));
   });
 
   it('should successfully handle a connection', async () => {
     await gateway.handleConnection(client);
-    expect(client.join).toHaveBeenCalledWith('user1/user2');
+    expect(client.join).toHaveBeenCalledWith('user1');
     // expect(logger.log).toHaveBeenCalledWith(
     //   'User id user1 successfully connected!',
     // );
@@ -80,13 +101,6 @@ describe('MessageGateway', () => {
     client.handshake.headers = {};
     await gateway.handleConnection(client);
     // expect(logger.log).toHaveBeenCalledWith('User Id missing in headers!');
-    expect(client.disconnect).toHaveBeenCalledWith(true);
-  });
-
-  it('should handle a connection with missing query params', async () => {
-    client.handshake.query = {};
-    await gateway.handleConnection(client);
-    // expect(logger.log).toHaveBeenCalledWith('userId missing in query params!');
     expect(client.disconnect).toHaveBeenCalledWith(true);
   });
 
