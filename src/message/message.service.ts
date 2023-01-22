@@ -7,10 +7,10 @@ import { MessageEntity } from './message.entity';
 export class MessageService {
   constructor(
     @InjectRepository(MessageEntity)
-    private repository: Repository<MessageEntity>,
+    private readonly repository: Repository<MessageEntity>,
   ) {}
 
-  async sendMessage(
+  async saveMessage(
     receiver: string,
     sender: string,
     content: string,
@@ -36,6 +36,7 @@ export class MessageService {
     receiver: string,
     sender: string,
   ): Promise<MessageEntity[]> {
+    //TODO: Return received messages as well
     return this.repository.findBy({
       sender,
       receiver,
