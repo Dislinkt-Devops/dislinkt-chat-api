@@ -35,18 +35,23 @@ describe('MessageGateway', () => {
     const module = await Test.createTestingModule({
       providers: [
         MessageGateway,
-        MessageService,
+        {
+          provide: MessageService,
+          useValue: {
+            getMessages: jest.fn(),
+            saveMessage: jest.fn(),
+          },
+        },
         MessageEntity,
         {
           provide: HttpService,
           useValue: {
-            get: jest.fn(() =>
-              of({
-                data: {
-                  data: 'true',
-                },
-              }),
-            ),
+            get: jest.fn().mockImplementation((url, _header) => {
+              let data = false;
+              if (url === 'http://dislinkt-posts:8080/people/user2')
+                data = true;
+              return of({ data: { data } });
+            }),
           },
         },
         {
@@ -80,6 +85,7 @@ describe('MessageGateway', () => {
         headers: { 'x-user-id': 'user1' },
       },
       rooms: ['user1'],
+      emit: jest.fn(),
       join: jest.fn(),
       send: jest.fn(),
       disconnect: jest.fn(),
@@ -122,6 +128,15 @@ describe('MessageGateway', () => {
     expect(client.send).toHaveBeenCalledTimes(1);
   });
 
+  it('should not handle a getMessages message', async () => {
+    const body = { userId: 'user3' };
+    await gateway.getMessages(body, client);
+
+    expect(messageService.getMessages).toHaveBeenCalledTimes(0);
+    expect(client.send).toHaveBeenCalledTimes(0);
+    expect(client.emit).toHaveBeenCalledTimes(1);
+  });
+
   it('should handle a message event', async () => {
     const message = { content: 'Hello', receiver: 'user2' };
     await gateway.handleMessage(message, client);
@@ -133,5 +148,14 @@ describe('MessageGateway', () => {
     );
 
     expect(mockServer.to).toHaveBeenCalledWith(['user2', 'user1']);
+  });
+
+  it('should not handle a message event', async () => {
+    const message = { content: 'Hello', receiver: 'user3' };
+    await gateway.handleMessage(message, client);
+
+    expect(messageService.saveMessage).toHaveBeenCalledTimes(0);
+    expect(mockServer.to).toHaveBeenCalledTimes(0);
+    expect(client.emit).toHaveBeenCalledTimes(1);
   });
 });
