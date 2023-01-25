@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThanOrEqual, Repository, UpdateResult } from 'typeorm';
+import { In, LessThanOrEqual, MongoRepository, UpdateResult } from 'typeorm';
 import { MessageEntity } from './message.entity';
 
 @Injectable()
 export class MessageService {
   constructor(
     @InjectRepository(MessageEntity)
-    private readonly repository: Repository<MessageEntity>,
+    private readonly repository: MongoRepository<MessageEntity>,
   ) {}
 
   async saveMessage(
@@ -36,10 +36,11 @@ export class MessageService {
     receiver: string,
     sender: string,
   ): Promise<MessageEntity[]> {
-    //TODO: Return received messages as well
     return this.repository.findBy({
-      sender,
-      receiver,
+      where: {
+        sender: { $in: [receiver, sender] },
+        receiver: { $in: [receiver, sender] },
+      },
     });
   }
 }

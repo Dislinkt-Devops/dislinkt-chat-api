@@ -62,14 +62,23 @@ export class MessageGateway
   ) {
     const currentUser = client.handshake.headers['x-user-id'] as string;
 
+    if (!(await this.isCommunicationAllowed(currentUser, body.userId))) {
+      const errorMessage = `Communication between user ${currentUser} and ${body.userId} is allowed.`;
+      client.emit('exception', errorMessage);
+      this.logger.error(errorMessage);
+      return;
+    }
+
     const messages = await this.messageService.getMessages(
       body.userId,
       currentUser,
     );
 
-    messages.forEach((message) => {
-      client.send(message);
-    });
+    messages
+      .sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1))
+      .forEach((message) => {
+        client.send(message);
+      });
   }
 
   @SubscribeMessage('message')
@@ -80,29 +89,35 @@ export class MessageGateway
     const sender = client.handshake.headers['x-user-id'] as string;
     const { receiver } = message;
 
+    if (!(await this.isCommunicationAllowed(sender, receiver))) {
+      const errorMessage = `Communication between user ${sender} and ${receiver} is allowed.`;
+      client.emit('exception', errorMessage);
+      this.logger.error(errorMessage);
+      return;
+    }
+
+    const { timestamp, id } = await this.messageService.saveMessage(
+      receiver,
+      sender,
+      message.content,
+    );
+
+    this.server
+      .to([receiver, sender])
+      .emit('message', { ...message, sender, timestamp, id });
+  }
+
+  private async isCommunicationAllowed(id1: string, id2: string) {
     const { data: isCommunicationAllowed } = (
       await lastValueFrom(
-        this.httpService.get(`http://${this.postsApi}/people/${receiver}`, {
+        this.httpService.get(`http://${this.postsApi}/people/${id2}`, {
           headers: {
-            'x-user-id': sender,
+            'x-user-id': id1,
           },
         }),
       )
     ).data;
 
-    if (!isCommunicationAllowed) {
-      const errorMessage = `Communication between user ${sender} and ${receiver} not allowed.`;
-      client.emit('exception', {
-        errorMessage,
-      });
-      this.logger.log(errorMessage);
-      return;
-    }
-
-    this.messageService.saveMessage(receiver, sender, message.content);
-
-    this.server
-      .to([receiver, sender])
-      .emit('message', { ...message, sender, timestamp: new Date() });
+    return isCommunicationAllowed;
   }
 }

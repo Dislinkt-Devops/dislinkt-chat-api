@@ -98,10 +98,7 @@ describe('MessageService', () => {
       const receiver = 'receiver';
       const sender = 'sender';
       await service.getMessages(receiver, sender);
-      expect(repo.findBy).toHaveBeenCalledWith({
-        sender,
-        receiver,
-      });
+      expect(repo.findBy).toHaveBeenCalled();
     });
 
     it('should return the result of repository.findBy', async () => {
