@@ -7,6 +7,7 @@ import {
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { AllExceptionFilter } from './filters/exception.filter';
 import { MessageEntity } from './message/message.entity';
 import { MessageModule } from './message/message.module';
@@ -14,6 +15,7 @@ import { LoggerMiddleware } from './middlewares/logger.middleware';
 
 @Module({
   imports: [
+    PrometheusModule.register(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: `.env.development`,
